@@ -1,26 +1,32 @@
+# Syntax for each header is [People_Who_Brought-Poeple_Who_Owe] or [People_Who_Brought] which defaults to split between all poeple
+[Currency]
+main = "£"
+K = "£0.074"
+
 [Em_Steve]
-river_boat_drinks = 20
-breakfast_1st_day = 92
-post_museum_coffee = 20
-supermarket = 87
-car_rental = 450
-teifenthal_drinks = 34
-heidelburg_lunch = 107
-lidl = 26
-bad_durkheim_drinks = 18
-fuel = 53
+hot_dogs_sat = 35
 
-[Bo_Rafe]
-taxi_to_boat = 20
-taxi_back_to_station = 13
-tower_viewing = 43
-coffee_hand_cheese = 31
-museum = 42
-ice_cream_bad_dirkheim = 11.9
+[Em_Steve-Em_Steve_Pete]
+flights = 666
+car_park = 55
+hot_dogs_sun = 21
+lake_drinks_pancake = 21
 
-[Giles_Sue]
-airbnb = 851.04
-flights = 1006.44
-boat = 96.10
-heidelburg_lunch_tip = 10
-heidelburg_drinks = 23.20
+[Steve-Steve_Pete]
+monday_brekky_airport = 16
+
+[Pete-Steve_Em_Pete]
+spoons_brekky = 30
+
+[Matt_Benny]
+fuel = "K500"
+shop_to_cabin = "K800" 
+fireworks = "K2000"
+farm_shop = "K1000"
+dinner_shop_fri = "K1000"
+pepperkaka = "K800"
+saturday_dinner = "K1000"
+
+[Matt-Matt_Em_Steve_Pete]
+bus_x2 = "K500"
+vehicular = "K500"
