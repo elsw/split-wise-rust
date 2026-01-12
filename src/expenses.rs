@@ -6,30 +6,28 @@ use toml::Table;
 use toml::Value;
 use std::fs;
 
-use crate::main;
-
  // Array of involved poeple, each with a set of expenses
 #[derive(Clone)]
 pub struct Expenses {
-    people: HashMap<String,PersonalExpenses>,
+    pub people: HashMap<String,PersonalExpenses>,
 	//currency list in the format {"£":1,"K": 0.074}, Where £ is the output currency and 1 Krone = £0.074
-	currencies: HashMap<String,f64>,
+	pub currencies: HashMap<String,f64>,
 }
 
 // A set of expenses, plus a field to total all the expenses
 #[derive(Clone)]
-struct PersonalExpenses {
+pub struct PersonalExpenses {
 	//Expenses in the format {"name_of_expense","£100"}
-    expenses: Vec<Expense>,
+    pub expenses: Vec<Expense>,
 	//Total spend, converted to main currency
-    personal_total_spend: f64,	
+    pub personal_total_spend: f64,	
 }
 
 #[derive(Clone)]
-struct Expense {
-    name: String,
-	amount: f64,
-	currency: char
+pub struct Expense {
+    pub name: String,
+	pub amount: f64,
+	pub currency: char
 }
 
 impl Expenses {
@@ -41,14 +39,15 @@ impl Expenses {
 	}
 
 	pub fn read_from_file(filename: &String) -> Expenses {
-		let input = match fs::read_to_string(filename).expect("Error opening file {filename}");
+		let input = fs::read_to_string(filename).expect("Error opening file {filename}");
 		let data: Table = match toml::from_str(input.as_str())
-		{
+		{                                 
 			Ok(value) => value,
 			Err(error) => panic!("Could not parse toml: {error}"),
 		};
 		
 		let main_currency: char = '£';
+		let mut all_expenses	= Expenses::new();
 
 		for (key, value) in data.iter() {
 			match value {
@@ -67,7 +66,7 @@ impl Expenses {
 							expense.currency = main_currency;
 						}
 						else if let Value::String(val) = value {
-							expense.amount = val[1:].clone();
+							expense.amount = val[1..].parse().unwrap();
 							expense.currency = val[0];
 						}
 						else {
@@ -82,7 +81,7 @@ impl Expenses {
 		all_expenses
 	}
 
-	pub fn print_spend_breakdown() {
+	pub fn print_spend_breakdown(all_expenses: Expenses) {
 		println!("Spend breakdown: ");
     	let mut total_spend = 0.0;
     	for (person,personal_expenses) in all_expenses.people.iter_mut() {

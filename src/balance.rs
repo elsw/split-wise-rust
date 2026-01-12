@@ -1,6 +1,8 @@
 use std::collections::HashMap;
+use super::expenses::Expenses;
 
-pub fn get_spend_diff(expenses: Expenses) -> HashMap<String,f64> {
+pub fn get_spend_diff(all_expenses: &Expenses) -> HashMap<String,f64> {
+	let total_spend = get_total_spend(all_expenses);
 	let per_person_spend = total_spend / (all_expenses.people.len() as f64);
     println!("Total Spend is {}, Divided by {}, cost each is {}",total_spend,all_expenses.people.len(),per_person_spend);
 
@@ -15,7 +17,7 @@ pub fn get_spend_diff(expenses: Expenses) -> HashMap<String,f64> {
     }
 }
 
-pub fn calculate_settle_amounts(spend_diff: HashMap<String,f64>) {
+pub fn calculate_settle_amounts(spend_diff: HashMap<String,f64>,all_expenses: Expenses) {
 	println!("\nTo Settle:");
     for receive_person in all_expenses.clone().people.keys() {
         if all_expenses.people[receive_person].personal_total_spend <= per_person_spend {
@@ -36,4 +38,12 @@ pub fn calculate_settle_amounts(spend_diff: HashMap<String,f64>) {
             println!("{give_person} Sends {} euros to {receive_person}",give_amount);
         }
     }
+}
+
+fn get_total_spend(all_expenses: &Expenses) -> f64 {
+	let mut total_spend = 0.0;
+	for (_person,personal_expenses) in all_expenses.people.iter() {
+			total_spend+= personal_expenses.personal_total_spend;
+	}
+	total_spend
 }
