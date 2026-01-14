@@ -2,43 +2,57 @@
  * 	This class handles reading the expenses from a file to a struct, and any necessary currency conversions
  */
 use std::collections::HashMap;
+use std::str::FromStr;
 use toml::Table;
 use toml::Value;
 use std::fs;
 
+use crate::main;
+
  // Array of involved poeple, each with a set of expenses
 #[derive(Clone)]
 pub struct Expenses {
-    pub people: HashMap<String,PersonalExpenses>,
-	//currency list in the format {"£":1,"K": 0.074}, Where £ is the output currency and 1 Krone = £0.074
+	// Array of people, with how much each person spent, in main_currency units
+    pub people: HashMap<String,f64>,
+	pub expenses: Vec<Expense>,
+	pub main_currency: char,
+	//currency list in the format {"K": 0.074}, Where £ is the output currency and 1 Krone = £0.074
 	pub currencies: HashMap<String,f64>,
 }
 
-// A set of expenses, plus a field to total all the expenses
 #[derive(Clone)]
-pub struct PersonalExpenses {
-	//Expenses in the format {"name_of_expense","£100"}
-    pub expenses: Vec<Expense>,
-	//Total spend, converted to main currency
-    pub personal_total_spend: f64,	
-}
-
-#[derive(Clone)]
+#[derive(Debug)]
 pub struct Expense {
     pub name: String,
 	pub amount: f64,
-	pub currency: char
+	pub currency: char,
+	pub brought_by: Vec<String>, //This expense was brought by who, should never be empty
+	pub expense_for: Vec<String> //This expense was brought for who, empty array means equally split between everyone
+}
+
+impl Expense {
+	pub fn new() -> Expense {
+		 Expense {
+			name: String::new(),
+			amount: 0.0,
+			currency: '£',
+			brought_by: Vec::new(),
+			expense_for: Vec::new()
+		}
+	}
 }
 
 impl Expenses {
 	pub fn new() -> Expenses {
 		 Expenses {
 			people: HashMap::new(),
+			expenses: Vec::new(),
 			currencies: HashMap::new(),
+			main_currency: '£'
 		}
 	}
 
-	pub fn read_from_file(filename: &String) -> Expenses {
+	pub fn read_from_file(&mut self,filename: String) {
 		let input = fs::read_to_string(filename).expect("Error opening file {filename}");
 		let data: Table = match toml::from_str(input.as_str())
 		{                                 
@@ -46,45 +60,131 @@ impl Expenses {
 			Err(error) => panic!("Could not parse toml: {error}"),
 		};
 		
-		let main_currency: char = '£';
-		let mut all_expenses	= Expenses::new();
-
 		for (key, value) in data.iter() {
 			match value {
 				Value::Table(table) => {
-					let mut personal_expenses = PersonalExpenses { expenses: Vec::new(),personal_total_spend: 0.0 };
-
-					for (key, value) in table{
-						let mut expense = Expense {name: key.clone(),amount: 0.0,currency: ' '};
-
-						if let Value::Float(val) = value {
-							expense.amount = val.clone();
-							expense.currency = main_currency;
-						}
-						else if let Value::Integer(val) = value {
-							expense.amount = val.clone() as f64;
-							expense.currency = main_currency;
-						}
-						else if let Value::String(val) = value {
-							expense.amount = val[1..].parse().unwrap();
-							expense.currency = val[0];
-						}
-						else {
-							println!("Got invalid value on second level {}",value);
-						}
+					match key.as_str() {
+						"Currency" => self.parse_currencies(table),
+						_ => self.parse_expenses(key,table)
 					}
-					all_expenses.people.insert(key.clone(),personal_expenses);
+					
 				}
 				_ => println!("First level should only be name labels, got: {}", value),
 			}
 		}
-		all_expenses
 	}
 
-	pub fn print_spend_breakdown(all_expenses: Expenses) {
+	fn parse_currencies(&mut self,table: &toml::map::Map<String, Value>)
+	{
+		for (key, value) in table {
+			if let Value::String(val) = value {
+				if key.as_str() == "main" {
+					self.main_currency = val.chars().nth(0).unwrap();
+				}
+				else {
+					let compare_currency = val.chars().nth(0).unwrap();
+					let temp = val.replace(compare_currency, "");
+					if compare_currency != self.main_currency {
+						println!("Invalid Currency, always compare to main currency");
+						continue;
+					}
+					self.currencies.insert(key.clone(), temp.parse().unwrap());
+				}
+			}
+		}
+		println!("Main Currency: {}",self.main_currency);
+		for (key, value) in self.currencies.iter_mut() {
+			println!("Other Currency: {key} = £{value}",);
+		}
+		println!();
+	}
+
+	fn parse_expenses(&mut self,names: &String, table: &toml::map::Map<String, Value>)
+	{
+		// Get Buyers and Brought for lists from the Table Header name
+		let names_split: Vec<String> = Vec::new();
+		let mut i: usize = 0;
+		let mut buyers: Vec<String> = Vec::new();
+		let mut brought_for: Vec<String> = Vec::new();
+		for names in names.split("-") {
+			if i == 0 {
+				//Buyers
+				for name in names.split("_") {
+					buyers.push(String::from_str(name).unwrap());
+				}
+			}
+			else if i == 1 {
+				//Brought for
+				for name in names.split("_") {
+					brought_for.push(String::from_str(name).unwrap());
+				}
+			}
+			i+=1;
+		}
+		if buyers.len() == 0 {
+			println!("No buyers detected for expense group: {names}, skipping...");
+			return;
+		}
+		
+		//Loop through the list of expenses for this group
+		for (key, value) in table{
+			let mut expense = Expense::new();
+			expense.name = key.clone();
+			expense.brought_by = buyers.clone();
+			expense.expense_for = brought_for.clone();
+
+			if let Value::Float(val) = value {
+				expense.amount = val.clone();
+				expense.currency = self.main_currency;
+			}
+			else if let Value::Integer(val) = value {
+				expense.amount = val.clone() as f64;
+				expense.currency = self.main_currency;
+			}
+			else if let Value::String(val) = value {
+				expense.currency = val.chars().nth(0).unwrap();
+				let temp = val.replace(expense.currency, "");
+				expense.amount = temp.parse().unwrap();
+				
+			}
+			else {
+				println!("Got invalid value on second level {}",value);
+			}
+
+			println!("Expense Added: {expense:?}");
+			self.expenses.push(expense);
+		}
+
+		
+		
+	}
+
+	pub fn total_spending(&mut self) {
+		for expense in self.expenses.iter_mut() {
+			let num_buyers = expense.brought_by.len() as f64;
+			//let num_for = expense.expense_for.len() as f64;
+			let mut amount = expense.amount;
+			if expense.currency != self.main_currency {
+				let key: String = expense.currency.to_string();
+				let conversion: f64 = self.currencies.get(&key).unwrap().clone();
+				amount *= conversion;
+			}
+			amount /= num_buyers;
+
+			for name in expense.brought_by.iter_mut() {
+				if !self.people.contains_key(name) {
+					self.people.insert(name.clone(), 0.0);
+				}
+				let named_amount = self.people.get_mut(name).unwrap();
+				*named_amount += amount;
+			}
+		}
+	}
+
+	pub fn print_spend_breakdown(&mut self) {
 		println!("Spend breakdown: ");
     	let mut total_spend = 0.0;
-    	for (person,personal_expenses) in all_expenses.people.iter_mut() {
+    	/*for (person,personal_expenses) in all_expenses.people.iter_mut() {
 			println!("Spent by {person}:");
 			for(key,value) in personal_expenses.expenses.iter_mut() {
 				println!("   {} euros on {}", value, key.replace("_", " "));
@@ -93,7 +193,7 @@ impl Expenses {
 			}
 			println!("Total spent by {person} is {} euros",personal_expenses.personal_total_spend);
 			println!("")
-		}
+		}*/
 	}
 }
 
