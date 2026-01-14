@@ -11,9 +11,10 @@ use crate::main;
 
  // Array of involved poeple, each with a set of expenses
 #[derive(Clone)]
+#[derive(Debug)]
 pub struct Expenses {
 	// Array of people, with how much each person spent, in main_currency units
-    pub people: HashMap<String,f64>,
+    pub people: Vec<String>,
 	pub expenses: Vec<Expense>,
 	pub main_currency: char,
 	//currency list in the format {"K": 0.074}, Where £ is the output currency and 1 Krone = £0.074
@@ -45,7 +46,7 @@ impl Expense {
 impl Expenses {
 	pub fn new() -> Expenses {
 		 Expenses {
-			people: HashMap::new(),
+			people: Vec::new(),
 			expenses: Vec::new(),
 			currencies: HashMap::new(),
 			main_currency: '£'
@@ -92,11 +93,11 @@ impl Expenses {
 				}
 			}
 		}
-		println!("Main Currency: {}",self.main_currency);
-		for (key, value) in self.currencies.iter_mut() {
-			println!("Other Currency: {key} = £{value}",);
-		}
-		println!();
+		//println!("Main Currency: {}",self.main_currency);
+		//for (key, value) in self.currencies.iter_mut() {
+		//	println!("Other Currency: {key} = £{value}",);
+		//}
+		//println!();
 	}
 
 	fn parse_expenses(&mut self,names: &String, table: &toml::map::Map<String, Value>)
@@ -106,18 +107,23 @@ impl Expenses {
 		let mut i: usize = 0;
 		let mut buyers: Vec<String> = Vec::new();
 		let mut brought_for: Vec<String> = Vec::new();
+
+		// The format here is List_Of_Buyers-List_Of_Brought_for
 		for names in names.split("-") {
-			if i == 0 {
-				//Buyers
-				for name in names.split("_") {
-					buyers.push(String::from_str(name).unwrap());
+			let mut names_array: Vec<String> = Vec::new();
+			for name_str in names.split("_") {
+				let name = String::from_str(name_str).unwrap();
+				if !self.people.contains(&name) {
+					self.people.push(name);
 				}
+				names_array.push(name);
+			}
+			
+			if i == 0 {
+				buyers.append(names_array);
 			}
 			else if i == 1 {
-				//Brought for
-				for name in names.split("_") {
-					brought_for.push(String::from_str(name).unwrap());
-				}
+				brought_for.append(names_array);
 			}
 			i+=1;
 		}
@@ -159,27 +165,6 @@ impl Expenses {
 		
 	}
 
-	pub fn total_spending(&mut self) {
-		for expense in self.expenses.iter_mut() {
-			let num_buyers = expense.brought_by.len() as f64;
-			//let num_for = expense.expense_for.len() as f64;
-			let mut amount = expense.amount;
-			if expense.currency != self.main_currency {
-				let key: String = expense.currency.to_string();
-				let conversion: f64 = self.currencies.get(&key).unwrap().clone();
-				amount *= conversion;
-			}
-			amount /= num_buyers;
-
-			for name in expense.brought_by.iter_mut() {
-				if !self.people.contains_key(name) {
-					self.people.insert(name.clone(), 0.0);
-				}
-				let named_amount = self.people.get_mut(name).unwrap();
-				*named_amount += amount;
-			}
-		}
-	}
 
 	pub fn print_spend_breakdown(&mut self) {
 		println!("Spend breakdown: ");

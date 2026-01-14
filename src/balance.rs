@@ -1,53 +1,34 @@
 use std::collections::HashMap;
 use super::expenses::Expenses;
 
-pub fn get_spend_diff(all_expenses: &Expenses) -> HashMap<String,f64> {
-	let total_spend = get_total_spend(all_expenses);
-	let per_person_spend = total_spend / (all_expenses.people.len() as f64);
-    println!("Total Spend is {}, Divided by {}, cost each is {}",total_spend,all_expenses.people.len(),per_person_spend);
-
-	let spend_diffs: HashMap<String,f64> = HashMap::new();
-
-    /*for (person,personal_expenses) in all_expenses.people.iter() {
-        let diff = personal_expenses.personal_total_spend - per_person_spend;
-        if diff.is_sign_positive() {
-            println!("{person} is owed {}",diff);
-        }
-        else {
-            println!("{person} owes {}",-diff);
-        }
-    }*/
-	spend_diffs
+pub struct Balance {
+    //Array of poeple and required payments
+    payments: HashMap<String,Payments>,
 }
 
-pub fn calculate_settle_amounts(spend_diff: &HashMap<String,f64>,all_expenses: &Expenses) {
-	let per_person_spend = 0.0; //TODO
-	println!("\nTo Settle:");
-    /*for receive_person in all_expenses.clone().people.keys() {
-        if all_expenses.people[receive_person].personal_total_spend <= per_person_spend {
-            continue;
+pub struct Payments {
+    //Array of poeple to pay
+    poeple: HashMap<String,f64>,
+}
+
+pub fn total_spending(expenses: &Expenses) -> Balance{
+    for expense in self.expenses.iter_mut() {
+        let num_buyers = expense.brought_by.len() as f64;
+        //let num_for = expense.expense_for.len() as f64;
+        let mut amount = expense.amount;
+        if expense.currency != self.main_currency {
+            let key: String = expense.currency.to_string();
+            let conversion: f64 = self.currencies.get(&key).unwrap().clone();
+            amount *= conversion;
         }
-        for give_person in all_expenses.clone().people.keys()  {
-            //take from those who owe in order
-            if all_expenses.people[give_person].personal_total_spend >= per_person_spend {
-                continue;
+        amount /= num_buyers;
+
+        for name in expense.brought_by.iter_mut() {
+            if !self.people.contains_key(name) {
+                self.people.insert(name.clone(), 0.0);
             }
-
-            let to_receive = all_expenses.people[receive_person].personal_total_spend - per_person_spend;
-            let to_give = per_person_spend - all_expenses.people[give_person].personal_total_spend;
-            let give_amount = (to_give).min(to_receive);
-            //all_expenses.people.get_mut(receive_person).unwrap().personal_total_spend -= give_amount;
-            //all_expenses.people.get_mut(give_person).unwrap().personal_total_spend += give_amount;
-
-            println!("{give_person} Sends {} euros to {receive_person}",give_amount);
+            let named_amount = self.people.get_mut(name).unwrap();
+            *named_amount += amount;
         }
-    }*/
-}
-
-fn get_total_spend(all_expenses: &Expenses) -> f64 {
-	let mut total_spend = 0.0;
-	/*for (_person,personal_expenses) in all_expenses.people.iter() {
-			total_spend+= personal_expenses.personal_total_spend;
-	}*/
-	total_spend
+    }
 }

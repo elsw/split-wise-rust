@@ -6,6 +6,7 @@ fn main() {
     let mut all_expenses = expenses::Expenses::new();
 	all_expenses.read_from_file(filename);
 	all_expenses.total_spending();
+    println!("{all_expenses:?}");
     //all_expenses.print_spend_breakdown();
 
     //spend_diffs = get_spend_diff(all_expenses);
