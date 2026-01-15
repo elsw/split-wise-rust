@@ -103,7 +103,6 @@ impl Expenses {
 	fn parse_expenses(&mut self,names: &String, table: &toml::map::Map<String, Value>)
 	{
 		// Get Buyers and Brought for lists from the Table Header name
-		let names_split: Vec<String> = Vec::new();
 		let mut i: usize = 0;
 		let mut buyers: Vec<String> = Vec::new();
 		let mut brought_for: Vec<String> = Vec::new();
@@ -114,16 +113,16 @@ impl Expenses {
 			for name_str in names.split("_") {
 				let name = String::from_str(name_str).unwrap();
 				if !self.people.contains(&name) {
-					self.people.push(name);
+					self.people.push(name.clone());
 				}
 				names_array.push(name);
 			}
 			
 			if i == 0 {
-				buyers.append(names_array);
+				buyers.append(&mut names_array);
 			}
 			else if i == 1 {
-				brought_for.append(names_array);
+				brought_for.append(&mut names_array);
 			}
 			i+=1;
 		}
