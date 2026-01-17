@@ -6,8 +6,7 @@ use std::str::FromStr;
 use toml::Table;
 use toml::Value;
 use std::fs;
-
-use crate::main;
+use std::fmt;
 
  // Array of involved poeple, each with a set of expenses
 #[derive(Clone)]
@@ -19,6 +18,8 @@ pub struct Expenses {
 	pub main_currency: char,
 	//currency list in the format {"K": 0.074}, Where £ is the output currency and 1 Krone = £0.074
 	pub currencies: HashMap<String,f64>,
+	//Weighting for people's payments, useful for joint bank accounts for couples
+	pub weights: HashMap<String,f64>,
 }
 
 #[derive(Clone)]
@@ -42,6 +43,31 @@ impl Expense {
 		}
 	}
 }
+impl fmt::Display for Expense {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		let mut brought_by_str = String::new();
+		let mut expense_for_str = String::new();
+
+		for name in self.brought_by.iter() {
+			brought_by_str.push_str(name);
+			brought_by_str.push_str(",");
+		}
+		brought_by_str = brought_by_str[..brought_by_str.len()-1].to_string();
+
+		for name in self.expense_for.iter() {
+			expense_for_str.push_str(name);
+			expense_for_str.push_str(",");
+		}
+		if expense_for_str.len() == 0 {
+			expense_for_str = "everyone".to_string();
+		}
+		else {
+			expense_for_str = expense_for_str[..expense_for_str.len()-1].to_string();
+		}
+		
+        write!(f, "{} Spent {}{} on {} for {}", brought_by_str, self.currency,self.amount,self.name,expense_for_str)
+    }
+}
 
 impl Expenses {
 	pub fn new() -> Expenses {
@@ -49,7 +75,8 @@ impl Expenses {
 			people: Vec::new(),
 			expenses: Vec::new(),
 			currencies: HashMap::new(),
-			main_currency: '£'
+			main_currency: '£',
+			weights: HashMap::new()
 		}
 	}
 
@@ -66,6 +93,7 @@ impl Expenses {
 				Value::Table(table) => {
 					match key.as_str() {
 						"Currency" => self.parse_currencies(table),
+						"Weights" => self.parse_weights(table),
 						_ => self.parse_expenses(key,table)
 					}
 					
@@ -98,6 +126,16 @@ impl Expenses {
 		//	println!("Other Currency: {key} = £{value}",);
 		//}
 		//println!();
+	}
+	fn parse_weights(&mut self, table: &toml::map::Map<String, Value>) {
+		for (key, value) in table {
+			if let Value::Float(val) = value {
+				self.weights.insert(key.clone(), val.clone() as f64);
+			}
+			else if let Value::Integer(val) = value {
+				self.weights.insert(key.clone(), val.clone() as f64);
+			}
+		}
 	}
 
 	fn parse_expenses(&mut self,names: &String, table: &toml::map::Map<String, Value>)
@@ -156,29 +194,32 @@ impl Expenses {
 				println!("Got invalid value on second level {}",value);
 			}
 
-			println!("Expense Added: {expense:?}");
 			self.expenses.push(expense);
 		}
-
-		
 		
 	}
 
+	pub fn total_spend(&mut self) -> HashMap<String,f64>{
+		let mut spend: HashMap<String,f64> = HashMap::new();
 
-	pub fn print_spend_breakdown(&mut self) {
-		println!("Spend breakdown: ");
-    	let mut total_spend = 0.0;
-    	/*for (person,personal_expenses) in all_expenses.people.iter_mut() {
-			println!("Spent by {person}:");
-			for(key,value) in personal_expenses.expenses.iter_mut() {
-				println!("   {} euros on {}", value, key.replace("_", " "));
-				total_spend += *value;
-				personal_expenses.personal_total_spend = personal_expenses.personal_total_spend + *value;
+		for expense in self.expenses.iter() {
+			//Calculate Amount of money
+			let num_buyers = expense.brought_by.len() as f64;
+			let mut amount = expense.amount;
+			if expense.currency != self.main_currency {
+				let key: String = expense.currency.to_string();
+				let conversion: f64 = self.currencies.get(&key).unwrap().clone();
+				amount *= conversion;
 			}
-			println!("Total spent by {person} is {} euros",personal_expenses.personal_total_spend);
-			println!("")
-		}*/
+			amount /= num_buyers;
+
+			for buyer in expense.brought_by.iter() {
+				*spend.entry(buyer.clone()).or_insert(0.0) += amount;
+			}
+		}
+		spend
 	}
+
 }
 
 

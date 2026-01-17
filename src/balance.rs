@@ -1,14 +1,21 @@
 use std::collections::HashMap;
-use super::expenses::Expenses;
+use crate::expenses;
 
+use super::expenses::Expenses;
+use std::fmt;
+
+#[derive(Debug)]
+#[derive(Clone)]
 pub struct Balance {
     //Array of poeple and required payments
-    payments: HashMap<String,Payments>,
+    pub payments: HashMap<String,Payments>,
 }
 
+#[derive(Debug)]
+#[derive(Clone)]
 pub struct Payments {
     //Array of poeple to pay
-    poeple: HashMap<String,f64>,
+    pub people_to_pay: HashMap<String,f64>,
 }
 
 impl Balance {
@@ -21,47 +28,64 @@ impl Balance {
 impl Payments {
 	pub fn new() -> Payments {
 		Payments {
-			poeple: HashMap::new()
+			people_to_pay: HashMap::new()
 		}
 	}
 }
+impl fmt::Display for Balance {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for (person,payments) in self.payments.iter() {
+            write!(f, "{person} Pays: ")?;
+            for (person_to_pay, amount) in payments.people_to_pay.iter() {
+                write!(f, "{person_to_pay} £{amount}, ")?;
+            }
+            writeln!(f,"")?;
+        }
+        Ok(())
+    }
+}
+
 
 pub fn total_spending(expenses: &Expenses) -> Balance{
 	let mut balance = Balance::new();
-    for expense in expenses.expenses.iter() {
-        let num_buyers = expense.brought_by.len() as f64;
-        let num_for = expense.expense_for.len() as f64;
 
-		//Calculate Amount of money
+    for expense in expenses.expenses.iter() {
+        let num_buyers = expense.brought_by.len();
+        let mut poeple_for = expense.expense_for.clone();
+
+        let mut total_weights= 0.0;
+        for person in poeple_for.iter() {
+            total_weights +=  expenses.weights.get(person).unwrap();
+        }
+
+        if poeple_for.len() == 0 {
+            //This means the spend is for everyone
+            poeple_for = expenses.people.clone();
+        }
+        let num_for = poeple_for.len();
+
+		//Calculate Total Amount of money
 		let mut amount = expense.amount;
 		if expense.currency != expenses.main_currency {
 			let key: String = expense.currency.to_string();
 			let conversion: f64 = expenses.currencies.get(&key).unwrap().clone();
 			amount *= conversion;
 		}
-		amount /= num_for;
-		amount /= num_buyers;
 
 		//For payments due, add the person if not yet added
-		for expense_name in expense.expense_for.iter() {
-			if !balance.payments.contains_key(expense_name) {
-				balance.payments.insert(expense_name.clone(), Payments::new());
-			}
+		for expense_name in poeple_for.iter() {
+            let payments = balance.payments.entry(expense_name.clone()).or_insert(Payments::new());
 
 			//Add Payment to each buyer
 			for buyer_name in expense.brought_by.iter() {
-				//Skip self expenses
 				if expense_name.eq(buyer_name) {
+                    //Skip self expenses
 					continue;
 				}
+                let amount_to_pay = (amount / total_weights) * expenses.weights.get(expense_name).unwrap();
 
 				//Append a payment to the list of payments for the person
-				if balance.payments.get(expense_name).unwrap().poeple.contains_key(buyer_name) {
-					balance.payments.get_mut(expense_name).unwrap().poeple.insert(buyer_name.clone(), amount);
-				} else {
-					let mut current_amount: &mut f64 = balance.payments.get_mut(expense_name).unwrap().poeple.get_mut(buyer_name).unwrap();
-					*current_amount += amount;
-				}
+                *payments.people_to_pay.entry(buyer_name.clone()).or_insert(0.0) += amount_to_pay;
 			}
 
 		}
