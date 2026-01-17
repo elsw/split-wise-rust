@@ -3,30 +3,35 @@
 main = "£"
 K = "£0.074"
 
-[Em_Steve]
+[Weights]
+MattBenny = 2
+EmSteve = 2
+Pete = 1
+
+[EmSteve]
 hot_dogs_sat = 35
 
-[Em_Steve-Em_Steve_Pete]
+[EmSteve-EmSteve_Pete]
 flights = 666
 car_park = 55
 hot_dogs_sun = 21
 lake_drinks_pancake = 21
-
-[Steve-Steve_Pete]
 monday_brekky_airport = 16
 
-[Pete-Steve_Em_Pete]
+[Pete-EmSteve_Pete]
 spoons_brekky = 30
 
-[Matt_Benny]
-fuel = "K500"
-shop_to_cabin = "K800" 
-fireworks = "K2000"
+[MattBenny]
+fuel = "K750"
+shop_to_cabin = "K1966" 
+fireworks = "K2796"
 farm_shop = "K1000"
-dinner_shop_fri = "K1000"
-pepperkaka = "K800"
-saturday_dinner = "K1000"
+dinner_shop_fri = "K1174"
+pepperkaken = "K995"
 
-[Matt-Matt_Em_Steve_Pete]
-bus_x2 = "K500"
-vehicular = "K500"
+[MattBenny-Pete]
+jam = "K187"
+
+[MattBenny-EmSteve_Pete]
+bus_x2 = "K374"
+funicular = "K320"

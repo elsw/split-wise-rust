@@ -37,7 +37,7 @@ impl fmt::Display for Balance {
         for (person,payments) in self.payments.iter() {
             write!(f, "{person} Pays: ")?;
             for (person_to_pay, amount) in payments.people_to_pay.iter() {
-                write!(f, "{person_to_pay} £{amount}, ")?;
+                write!(f, "{person_to_pay} £{amount:.1}, ")?;
             }
             writeln!(f,"")?;
         }
@@ -53,16 +53,16 @@ pub fn total_spending(expenses: &Expenses) -> Balance{
         let num_buyers = expense.brought_by.len();
         let mut poeple_for = expense.expense_for.clone();
 
-        let mut total_weights= 0.0;
-        for person in poeple_for.iter() {
-            total_weights +=  expenses.weights.get(person).unwrap();
-        }
-
         if poeple_for.len() == 0 {
             //This means the spend is for everyone
             poeple_for = expenses.people.clone();
         }
         let num_for = poeple_for.len();
+
+        let mut total_weights= 0.0;
+        for person in poeple_for.iter() {
+            total_weights +=  expenses.weights.get(person).unwrap();
+        }
 
 		//Calculate Total Amount of money
 		let mut amount = expense.amount;
